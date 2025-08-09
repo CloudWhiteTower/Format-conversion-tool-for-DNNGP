@@ -1,0 +1,32 @@
+PLINK v2.0.0-a.7 64-bit (7 Jul 2025)
+Options in effect:
+  --out C:\Users\Cloud\Desktop\showANDdnngp\SNP\pca250
+  --pca 250
+  --threads 30
+  --vcf C:\Users\Cloud\Desktop\showANDdnngp\SNP\origin_maize.geno.selected.vcf
+
+Hostname: WHITETOWER
+Working directory: C:\Users\Cloud\Desktop\showANDdnngp
+Start time: Sat Aug 09 15:56:17 2025
+
+Random number seed: 1754726177
+23850 MiB RAM detected; reserving 11925 MiB for main workspace.
+Using up to 30 threads (change this with --threads).
+--vcf: 4127 variants scanned.
+--vcf: C:\Users\Cloud\Desktop\showANDdnngp\SNP\pca250-temporary.pgen +
+C:\Users\Cloud\Desktop\showANDdnngp\SNP\pca250-temporary.pvar.zst +
+C:\Users\Cloud\Desktop\showANDdnngp\SNP\pca250-temporary.psam written.
+522 samples (0 females, 0 males, 522 ambiguous; 522 founders) loaded from
+C:\Users\Cloud\Desktop\showANDdnngp\SNP\pca250-temporary.psam.
+4127 variants loaded from
+C:\Users\Cloud\Desktop\showANDdnngp\SNP\pca250-temporary.pvar.zst.
+Note: No phenotype data present.
+Calculating allele frequencies... done.
+Constructing GRM: done.
+Correcting for missingness... done.
+Extracting eigenvalues and eigenvectors... done.
+--pca: Eigenvectors written to
+C:\Users\Cloud\Desktop\showANDdnngp\SNP\pca250.eigenvec , and eigenvalues
+written to C:\Users\Cloud\Desktop\showANDdnngp\SNP\pca250.eigenval .
+
+End time: Sat Aug 09 15:56:17 2025
