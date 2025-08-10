@@ -97,9 +97,23 @@ def load_dataframe(
             else:
                 id_col_name = df.columns[0]
 
-        # 丢弃 FID/#FID（若需要）
+        # 丢弃 FID/#FID（若需要）并确保索引列仍然存在
         if drop_fid and fid_like_cols:
             df = df.drop(columns=fid_like_cols)
+            if id_col_name in fid_like_cols or id_col_name not in df.columns:
+                # 原先选定的索引列被删除，重新选择可用的 ID 列
+                if iid_like_cols:
+                    for c in iid_like_cols:
+                        if c in df.columns:
+                            id_col_name = c
+                            break
+                if id_col_name not in df.columns:
+                    if index_col is not None and index_col in df.columns:
+                        id_col_name = index_col
+                    elif index_col_pos is not None and 0 <= index_col_pos < len(df.columns):
+                        id_col_name = df.columns[index_col_pos]
+                    else:
+                        id_col_name = df.columns[0]
 
         # 将以 PC 开头的列尽量转为 float32
         pc_cols = [c for c in df.columns if c.upper().startswith("PC")]
