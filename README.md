@@ -1,4 +1,4 @@
-# 为DNNGP制作的输入格式转换工具 Input format conversion tool for DNNGP
+# 为DNNGP制作的格式转换工具 Format conversion tool for DNNGP
 DNNG是一个用于基因组预测的深度神经网络模型
 原项目位置： > [DNNGP: Deep neural network for genomic prediction](https://github.com/AIBreeding/DNNGP)
 
@@ -13,6 +13,34 @@ DNNG是一个用于基因组预测的深度神经网络模型
   - origin_maize.geno.selected.hmp.txt（示例基因组文件）
   - origin_maize.geno.selected.vcf（示例转换后的vcf文件）
   - plink2output（用于存放plink2的输出，其内有eigenvec文件）
+
+#### 使用示例：HapMap(hmp.txt) → VCF
+
+在仓库根目录打开 PowerShell 或 CMD，执行以下任一方式。
+
+- PowerShell（使用脚本默认示例路径，输出到 `SNP/origin_maize.geno.selected.vcf`）：
+
+  ```powershell
+  python .\SNP\hapmap_to_vcf.py
+  ```
+
+- 指定输入/输出（单行）：
+
+  ```powershell
+  python .\SNP\hapmap_to_vcf.py "C:\\path\\to\\input.hmp.txt" "C:\\path\\to\\output.vcf"
+  ```
+
+  ```cmd
+  python .\SNP\hapmap_to_vcf.py "C:\path\to\input.hmp.txt" "C:\path\to\output.vcf"
+  ```
+
+- PowerShell 多行续行（注意使用反引号 `）：
+
+  ```powershell
+  python .\SNP\hapmap_to_vcf.py `
+    "C:\\path\\to\\input.hmp.txt" `
+    "C:\\path\\to\\output.vcf"
+  ```
   
 - ### pheno
   - csv_to_tsv.py（将csv转换为tsv）

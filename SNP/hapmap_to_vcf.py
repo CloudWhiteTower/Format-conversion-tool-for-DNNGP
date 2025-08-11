@@ -1,4 +1,4 @@
-"""
+r"""
 HapMap(hmp.txt) -> VCF 转换脚本（中文使用说明）
 
 功能：
@@ -6,14 +6,21 @@ HapMap(hmp.txt) -> VCF 转换脚本（中文使用说明）
 - 识别等位基因字段（如 A/C、AC、A|C），支持 IUPAC 简并码（R,Y,W,S,K,M 等）；
 - 缺失/不确定基因型输出为 ./.；单态位点 ALT 列输出为 .；格式列为 GT。
 
-示例：
-  1) 使用脚本内默认路径（见 main 中 default_input/default_output）：
-     python C:\\Users\\Cloud\\Desktop\\showANDdnngp\\SNP\\hapmap_to_vcf.py
+示例（Windows）：
+  1) 在仓库根目录运行（使用默认示例文件，默认输出到 `SNP/origin_maize.geno.selected.vcf`）：
+     PowerShell:
+       python .\\SNP\\hapmap_to_vcf.py
 
-  2) 指定输入/输出路径：
-     python C:\\Users\\Cloud\\Desktop\\showANDdnngp\\SNP\\hapmap_to_vcf.py \\
-       C:\\Users\\Cloud\\Desktop\\showANDdnngp\\SNP\\origin_maize.geno.selected.hmp.txt \\
-       C:\\Users\\Cloud\\Desktop\\showANDdnngp\\SNP\\origin_maize.geno.selected.vcf
+  2) 指定输入/输出路径（单行）：
+     PowerShell:
+       python .\\SNP\\hapmap_to_vcf.py "C:\\path\\to\\input.hmp.txt" "C:\\path\\to\\output.vcf"
+     CMD:
+       python .\SNP\hapmap_to_vcf.py "C:\path\to\input.hmp.txt" "C:\path\to\output.vcf"
+
+  3) 指定输入/输出路径（PowerShell 多行，使用反引号续行）：
+       python .\\SNP\\hapmap_to_vcf.py `
+         "C:\\path\\to\\input.hmp.txt" `
+         "C:\\path\\to\\output.vcf"
 
 说明：
 - 输入必须是标准 HapMap 列表头（前 11 列为元数据，样本列从第 12 列开始）。
@@ -23,7 +30,7 @@ HapMap(hmp.txt) -> VCF 转换脚本（中文使用说明）
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def parse_alleles_field(alleles_raw: str) -> list:
@@ -118,7 +125,7 @@ def normalize_genotype_raw(gt_raw: str):
 
 def write_vcf_header(out_fh, sample_ids):
     out_fh.write("##fileformat=VCFv4.2\n")
-    out_fh.write(f"##source=hapmap_to_vcf.py ({datetime.utcnow().isoformat()}Z)\n")
+    out_fh.write(f"##source=hapmap_to_vcf.py ({datetime.now(timezone.utc).isoformat()})\n")
     out_fh.write("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n")
     header_cols = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT"]
     header_cols.extend(sample_ids)
@@ -246,9 +253,10 @@ def convert_hapmap_to_vcf(hapmap_path: str, vcf_path: str):
 
 
 def main():
-    # 默认输入/输出路径（请按需修改）
-    default_input = r"C:\\Users\\Cloud\\Desktop\\showANDdnngp\\SNP\\origin_maize.geno.selected.hmp.txt"
-    default_output = r"C:\\Users\\Cloud\\Desktop\\showANDdnngp\\SNP\\origin_maize.geno.selected.vcf"
+    # 默认输入/输出路径：相对于本脚本所在目录的示例文件
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    default_input = os.path.join(script_dir, "origin_maize.geno.selected.hmp.txt")
+    default_output = os.path.join(script_dir, "origin_maize.geno.selected.vcf")
 
     # 支持命令行参数覆盖：python hapmap_to_vcf.py <input_hmp.txt> <output.vcf>
     if len(sys.argv) >= 3:

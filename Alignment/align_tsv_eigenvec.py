@@ -10,6 +10,11 @@ r"""
 - 在新文件中（TSV 与 eigenvec）均使用匹配保留成功的那一部分作为个体 ID，其它部分会被去掉；
 - 若 eigenvec 有 FID+IID 两列，则输出时会将两列统一设置为对齐后的个体 ID；若只有 IID 一列，则替换该列。
 
+新增：
+- 自动移除“空/无效 ID”（空串、仅空白、NA、.）的个体，并在两个输出文件中同时剔除，确保一一对应；
+- 若 TSV 中同一对齐后 ID 出现多行，仅保留第一行，其余忽略并提示数量；
+- 保持输出顺序以 eigenvec 为准。
+
 注意与假设：
 - 假定 TSV 为“行=个体”的宽表结构，`--id-col` 指定个体 ID 所在列（基于 0 的索引，默认 0 列）。
 - 自动检测 eigenvec 是否为 [IID, PCs...] 或 [FID, IID, PCs...] 结构；也可用 `--eigenvec-id` 强制指定使用 `iid` 或 `fid`。
@@ -48,6 +53,11 @@ import csv
 import os
 import sys
 from typing import Dict, List, Optional, Tuple
+
+
+def is_empty_id(token: Optional[str]) -> bool:
+    s = (token or "").strip()
+    return s == "" or s.upper() == "NA" or s == "."
 
 
 def try_parse_float(token: str) -> bool:
@@ -164,7 +174,7 @@ def build_id_map_from_tsv(
         if id_col >= len(row):
             continue
         raw_id = (row[id_col] or "").strip()
-        if not raw_id:
+        if is_empty_id(raw_id):
             continue
 
         chosen: Optional[str] = None
@@ -221,6 +231,11 @@ def main():
     header_tokens, eigen_lines, id_idx, fid_idx = read_eigenvec(
         args.eigenvec, eigenvec_id_mode=args.eigenvec_id
     )
+    # 先移除 eigenvec 中空/无效 ID 的行
+    before_eigen = len(eigen_lines)
+    eigen_lines = [tok for tok in eigen_lines if (len(tok) > id_idx and not is_empty_id(tok[id_idx]))]
+    removed_eigen_empty = before_eigen - len(eigen_lines)
+
     eigen_ids_in_order: List[str] = [tok[id_idx] for tok in eigen_lines]
     eigen_id_set = set(eigen_ids_in_order)
 
@@ -238,13 +253,17 @@ def main():
     aligned_eigen_lines: List[str] = []
 
     kept = 0
+    skipped_due_to_dup = 0
     for tokens in eigen_lines:
         eigen_id = tokens[id_idx]
         if eigen_id not in aligned_id_to_rows:
             continue  # 个体不在 TSV 中（或未能匹配），跳过
 
         # 选择该 eigen_id 对应的第一条 TSV 行（如有重复，仅保留第一条）
-        row = aligned_id_to_rows[eigen_id][0]
+        rows_for_id = aligned_id_to_rows[eigen_id]
+        row = rows_for_id[0]
+        if len(rows_for_id) > 1:
+            skipped_due_to_dup += len(rows_for_id) - 1
         aligned_tsv_rows.append(row)
 
         # 构造新的 eigenvec 行：将 ID 统一为 row[id_col]
@@ -272,6 +291,10 @@ def main():
             fout.write(line + "\n")
 
     print(f"[Done] 对齐完成：保留个体 {kept} 个")
+    if removed_eigen_empty > 0:
+        print(f"[Info] 已从 eigenvec 中移除空/无效 ID 个体：{removed_eigen_empty}")
+    if skipped_due_to_dup > 0:
+        print(f"[Info] TSV 中存在重复映射，除首个外已忽略重复行：{skipped_due_to_dup}")
     print(f"[Out] TSV: {args.out_tsv}")
     print(f"[Out] EIGEN: {args.out_eigenvec}")
 
