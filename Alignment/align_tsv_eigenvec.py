@@ -18,6 +18,7 @@ r"""
 注意与假设：
 - 假定 TSV 为“行=个体”的宽表结构，`--id-col` 指定个体 ID 所在列（基于 0 的索引，默认 0 列）。
 - 自动检测 eigenvec 是否为 [IID, PCs...] 或 [FID, IID, PCs...] 结构；也可用 `--eigenvec-id` 强制指定使用 `iid` 或 `fid`。
+ - 可选过滤非有限数（NaN/Inf）：通过参数在 TSV 与 eigenvec 两侧同时剔除含非有限数的样本，避免下游 pearsonr 报错。
 
 使用示例（PowerShell，可直接复制运行并替换为你的真实路径）：
   python C:\Users\Cloud\Desktop\showANDdnngp\Alignment\align_tsv_eigenvec.py ^
@@ -53,6 +54,20 @@ import csv
 import os
 import sys
 from typing import Dict, List, Optional, Tuple
+
+
+def is_empty_id(token: Optional[str]) -> bool:
+    s = (token or "").strip()
+    return s == "" or s.upper() == "NA" or s == "."
+
+
+def is_finite_number(token: str) -> bool:
+    try:
+        import math
+        x = float(str(token).strip())
+        return math.isfinite(x)
+    except Exception:
+        return False
 
 
 def is_empty_id(token: Optional[str]) -> bool:
@@ -236,11 +251,53 @@ def main():
     eigen_lines = [tok for tok in eigen_lines if (len(tok) > id_idx and not is_empty_id(tok[id_idx]))]
     removed_eigen_empty = before_eigen - len(eigen_lines)
 
+    # 可选：过滤 eigenvec 中含非有限数（NaN/Inf）的样本行
+    removed_nonfinite_eigen = 0
+    if '--filter-finite-eigenvec' in sys.argv:
+        cleaned = []
+        for tok in eigen_lines:
+            ok = True
+            for v in tok[id_idx + 1:]:
+                if not is_finite_number(v):
+                    ok = False
+                    break
+            if ok:
+                cleaned.append(tok)
+            else:
+                removed_nonfinite_eigen += 1
+        eigen_lines = cleaned
+
     eigen_ids_in_order: List[str] = [tok[id_idx] for tok in eigen_lines]
     eigen_id_set = set(eigen_ids_in_order)
 
     # 读取 TSV 并根据 eigen IDs 构建映射
     header, tsv_rows = read_tsv(args.tsv, args.id_col)
+    # 可选：基于指定列过滤 TSV 的非有限数样本（以命令行原始参数触发，避免破坏现有接口）
+    removed_nonfinite_tsv = 0
+    tsv_cols_arg_prefix = '--filter-finite-tsv-cols='
+    raw_arg = next((a for a in sys.argv if a.startswith(tsv_cols_arg_prefix)), None)
+    cols_idx: List[int] = []
+    if raw_arg is not None:
+        try:
+            cols_idx = [int(x) for x in raw_arg[len(tsv_cols_arg_prefix):].split(',') if str(x).strip() != '']
+        except Exception:
+            print("[Error] --filter-finite-tsv-cols 解析失败，应为以逗号分隔的列索引，如 0,2,5")
+            sys.exit(1)
+    if cols_idx:
+        filtered_rows: List[List[str]] = []
+        for row in tsv_rows:
+            ok = True
+            for ci in cols_idx:
+                if ci < 0 or ci >= len(row):
+                    continue
+                if not is_finite_number(row[ci]):
+                    ok = False
+                    break
+            if ok:
+                filtered_rows.append(row)
+            else:
+                removed_nonfinite_tsv += 1
+        tsv_rows = filtered_rows
     aligned_id_to_rows, original_to_aligned = build_id_map_from_tsv(
         tsv_rows=tsv_rows,
         id_col=args.id_col,
@@ -295,6 +352,10 @@ def main():
         print(f"[Info] 已从 eigenvec 中移除空/无效 ID 个体：{removed_eigen_empty}")
     if skipped_due_to_dup > 0:
         print(f"[Info] TSV 中存在重复映射，除首个外已忽略重复行：{skipped_due_to_dup}")
+    if removed_nonfinite_eigen > 0:
+        print(f"[Info] 已从 eigenvec 中移除含非有限数的样本：{removed_nonfinite_eigen}")
+    if removed_nonfinite_tsv > 0:
+        print(f"[Info] 已从 TSV 中移除含非有限数的样本：{removed_nonfinite_tsv}")
     print(f"[Out] TSV: {args.out_tsv}")
     print(f"[Out] EIGEN: {args.out_eigenvec}")
 
